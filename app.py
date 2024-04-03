@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 st.set_page_config(
     page_title="Boston Housing Assistant",
     page_icon="🌆",
-    layout="centered", # centered, wide 
-    initial_sidebar_state="auto", 
+    layout="centered",
+    initial_sidebar_state="auto",
     menu_items=None
 )
 
@@ -16,42 +16,67 @@ st.title("🌆 Boston Housing Assistant")
 df = pd.read_csv('https://github.com/KrantLeeee/TECHIN-510-Lab2/raw/main/Boston%20housing%20dataset.zip')
 
 # Fill missing values in all columns with the mean
-df_filled = df.fillna(df.mean())
+df = df.fillna(df.mean())
 
-# Use a slider to select the range of average number of rooms (RM)
-min_rooms, max_rooms = st.slider(
-    'Select the range of average number of rooms (RM)',
-    float(df_filled['RM'].min()), float(df_filled['RM'].max()), (3.0, 8.0)
-)
+# Sidebar filters
+with st.sidebar:
+    st.write("### Filters")
+    room_number_slider = st.slider(
+        'Select the range of average number of rooms (RM)',
+        float(df["RM"].min()),
+        float(df["RM"].max()),
+    )
 
-# Use a dropdown menu to select the maximum crime rate (CRIM)
-max_crime_rate = st.selectbox(
-    'Select the maximum crime rate (CRIM) %',
-    options=[0.1, 1, 5, 10, 20, 50, 100],
-    index=None
-)
+    max_ptratio_slider = st.slider(
+        'Select the maximum pupil-teacher ratio (PTRATIO)',
+        float(df["PTRATIO"].min()),
+        float(df["PTRATIO"].max()),
+    )
 
-# Use a selector to choose the maximum pupil-teacher ratio (PTRATIO)
-max_ptratio = st.selectbox(
-    'Select the maximum pupil-teacher ratio (PTRATIO)',
-    options=sorted(df_filled['PTRATIO'].unique()),
-    index=None
-)
+    min_age, max_age = st.slider(
+        'Select the range of the age of house (AGE) (0-100 years)',
+        int(df['AGE'].min()), int(df['AGE'].max()), (0, 100)
+    )
+
+    max_crime_rate = st.selectbox(
+        'Select the maximum crime rate (CRIM) (0-100%)',
+        options=[0.1, 1, 5, 10, 20, 50, 100],
+        index=2
+    )
 
 # Filter the data
-filtered_data = df_filled[
-    (df_filled['RM'] >= min_rooms) & 
-    (df_filled['RM'] <= max_rooms) & 
-    (df_filled['CRIM'] <= max_crime_rate) &
-    (df_filled['PTRATIO'] <= max_ptratio)
-]
+if max_crime_rate:
+    df = df[df["CRIM"] <= max_crime_rate]
+df = df[df["RM"] <= room_number_slider]
+df = df[df["PTRATIO"] <= max_ptratio_slider]
+df = df[(df["AGE"] >= min_age) & (df["AGE"] <= max_age)]
 
-# Data visualization
-st.write("Filtered Data", filtered_data)
+st.write("## Results", df)
 
-# Plot a scatter plot
-fig, ax = plt.subplots()
-ax.scatter(filtered_data['RM'], filtered_data['MEDV'])
-ax.set_xlabel('Average Number of Rooms')
-ax.set_ylabel('Median Value of Homes')
+# Plotting in a 2x2 grid
+fig, axs = plt.subplots(2, 2, figsize=(15, 10))
+
+# Adjust subplots to provide space for titles
+plt.subplots_adjust(hspace=0.3)
+
+sns.regplot(x="CRIM", y="MEDV", data=df, scatter_kws={'alpha':0.5}, line_kws={'color': 'red'}, ax=axs[0, 0])
+axs[0, 0].set_title("Trend of Median Value as CRIM varies", pad=20)
+axs[0, 0].set_xlabel('Crime Rate per Capita')
+axs[0, 0].set_ylabel('Median Value of Homes ($1000s)')
+
+sns.regplot(x="AGE", y="MEDV", data=df, scatter_kws={'alpha':0.5}, line_kws={'color': 'green'}, ax=axs[0, 1])
+axs[0, 1].set_title("Trend of Median Value as AGE varies", pad=20)
+axs[0, 1].set_xlabel('Proportion of Owner-Occupied Units Built Prior to 1940')
+axs[0, 1].set_ylabel('Median Value of Homes ($1000s)')
+
+sns.regplot(x="DIS", y="MEDV", data=df, scatter_kws={'alpha':0.5}, line_kws={'color': 'blue'}, ax=axs[1, 0])
+axs[1, 0].set_title("Trend of Median Value as DIS varies", pad=20)
+axs[1, 0].set_xlabel('Weighted Distances to Five Boston Employment Centres')
+axs[1, 0].set_ylabel('Median Value of Homes ($1000s)')
+
+sns.regplot(x="RM", y="MEDV", data=df, scatter_kws={'alpha':0.5}, line_kws={'color': 'purple'}, ax=axs[1, 1])
+axs[1, 1].set_title("Trend of Median Value as RM varies", pad=20)
+axs[1, 1].set_xlabel('Average Number of Rooms')
+axs[1, 1].set_ylabel('Median Value of Homes ($1000s)')
+
 st.pyplot(fig)
