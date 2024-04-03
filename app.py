@@ -41,7 +41,7 @@ with st.sidebar:
     max_crime_rate = st.selectbox(
         'Select the maximum crime rate (CRIM) (0-100%)',
         options=[0.1, 1, 5, 10, 20, 50, 100],
-        index=2
+        index=None
     )
 
 # Filter the data
